@@ -46,28 +46,46 @@
             const [apartments, setApartments] = useState([]);
             const [loading, setLoading] = useState(true);
 
-            useEffect(() => {
+           useEffect(() => {
                 const onScroll = () => setScrolled(window.scrollY > 50);
                 window.addEventListener('scroll', onScroll);
 
-                // Nạp dữ liệu từ API
-                const API_URL = "https://11n523x3.api.sanity.io/v2026-04-17/data/query/production?query=*%5B_type+%3D%3D+%22apartment%22%5D%7B%0A++%22id%22%3A+_id%2C%0A++name%2C%0A++type%2C%0A++price%2C%0A++size%2C%0A++%22images%22%3A+images%5B%5D.asset-%3Eurl%2C%0A++desc%2C%0A++amenities%0A%7D&perspective=drafts"; 
+                // --- KẾT NỐI SANITY CHO PROJECT 11n523x3 ---
+                const projectId = '11n523x3'; 
+                const dataset = 'production';
+                
+                // Câu lệnh GROQ lấy dữ liệu căn hộ
+                // Lưu ý: "images[0].asset->url" sẽ lấy link của tấm ảnh đầu tiên trong mảng ảnh
+                const query = encodeURIComponent(`*[_type == "apartment"]{
+                    "id": _id,
+                    "name": name,
+                    "type": type,
+                    "size": size,
+                    "price": price,
+                    "desc": desc,
+                    "images": images[].asset->url,
+                    "amenities": amenities
+                }`);
+
+                const API_URL = `https://${projectId}.api.sanity.io/v2021-10-21/data/query/${dataset}?query=${query}`;
+
                 fetch(API_URL)
                     .then(res => res.json())
                     .then(data => {
-                        // Chấp nhận cả định dạng { result: [...] } hoặc [...]
-                        const items = data.result || data || [];
-                        setApartments(items);
+                        // Sanity trả kết quả về trong mảng result
+                        if (data.result) {
+                            setApartments(data.result);
+                        }
                         setLoading(false);
                     })
                     .catch(err => {
-                        console.error("Lỗi tải dữ liệu:", err);
+                        console.error("Lỗi kết nối Sanity:", err);
                         setLoading(false);
                     });
+                // --- KẾT THÚC KẾT NỐI ---
 
                 return () => window.removeEventListener('scroll', onScroll);
             }, []);
-
             const filteredApts = filter === 'All' ? apartments : apartments.filter(a => a.type === filter);
 
             const openModal = (apt) => {
